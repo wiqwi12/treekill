@@ -1,0 +1,323 @@
+basePath: /
+definitions:
+  dto.AuthResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  dto.CreateNoteRequest:
+    properties:
+      content:
+        example: Note content here
+        type: string
+      title:
+        example: My First Note
+        type: string
+    type: object
+  dto.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: P@ssw0rd!
+        type: string
+    type: object
+  dto.RegistrationRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: P@ssw0rd!
+        type: string
+      username:
+        example: john_doe
+        type: string
+    type: object
+  dto.UpdateNoteRequest:
+    properties:
+      content:
+        example: Updated note content
+        type: string
+      title:
+        example: Updated Note Title
+        type: string
+    type: object
+  dto.UserResponse:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      userid:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      username:
+        example: john_doe
+        type: string
+    type: object
+  errors.ErrorResponse:
+    properties:
+      error:
+        example: error description
+        type: string
+    type: object
+  models.Note:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      titel:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@studynoteapi.com
+    name: API Support
+  description: API for notes management with JWT authentication
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: StudyNoteAPI
+  version: 0.8.2
+paths:
+  /notes:
+    get:
+      description: Get list of all user's notes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Note'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      security:
+      - JWTAuth: []
+      summary: Get all notes
+      tags:
+      - Notes
+    post:
+      consumes:
+      - application/json
+      description: Create new note for authenticated user
+      parameters:
+      - description: Note data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateNoteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Note'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      security:
+      - JWTAuth: []
+      summary: Create new note
+      tags:
+      - Notes
+  /notes/{id}:
+    delete:
+      description: Delete note by ID
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      security:
+      - JWTAuth: []
+      summary: Delete note
+      tags:
+      - Notes
+    get:
+      description: Get single note by its ID
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Note'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      security:
+      - JWTAuth: []
+      summary: Get note by ID
+      tags:
+      - Notes
+    put:
+      consumes:
+      - application/json
+      description: Update existing note
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated note data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateNoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Note'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      security:
+      - JWTAuth: []
+      summary: Update note
+      tags:
+      - Notes
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: Get JWT access token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      summary: User authentication
+      tags:
+      - Auth
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      description: Create new user account
+      parameters:
+      - description: Registration data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegistrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      summary: User registration
+      tags:
+      - Auth
+securityDefinitions:
+  JWTAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
