@@ -20,10 +20,9 @@ func NewAuthMiddleware(secret string) *AuthMiddleware {
 
 func (m *AuthMiddleware) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Отладочная информация
+
 		fmt.Printf("Request path: %s\n", r.URL.Path)
 
-		// Проверка на публичные маршруты
 		if r.URL.Path == "/user/login" ||
 			r.URL.Path == "/user/register" ||
 			strings.HasPrefix(r.URL.Path, "/swagger/") {

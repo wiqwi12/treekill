@@ -36,6 +36,12 @@ definitions:
         example: john_doe
         type: string
     type: object
+  dto.StandartResponse:
+    properties:
+      message:
+        example: Hello World
+        type: string
+    type: object
   dto.UpdateNoteRequest:
     properties:
       content:
@@ -43,18 +49,6 @@ definitions:
         type: string
       title:
         example: Updated Note Title
-        type: string
-    type: object
-  dto.UserResponse:
-    properties:
-      email:
-        example: user@example.com
-        type: string
-      userid:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      username:
-        example: john_doe
         type: string
     type: object
   errors.ErrorResponse:
@@ -132,7 +126,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/models.Note'
+            $ref: '#/definitions/dto.StandartResponse'
         "400":
           description: Bad Request
           schema:
@@ -303,7 +297,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.UserResponse'
+            $ref: '#/definitions/dto.StandartResponse'
         "400":
           description: Bad Request
           schema:

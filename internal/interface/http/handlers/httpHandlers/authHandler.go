@@ -23,7 +23,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 // @Accept json
 // @Produce json
 // @Param input body dto.RegistrationRequest true "Registration data"
-// @Success 201 {object} dto.UserResponse
+// @Success 201 {object} dto.StandartResponse
 // @Failure 400 {object} errors.ErrorResponse
 // @Failure 500 {object} errors.ErrorResponse
 // @Router /user/register [post]
@@ -46,7 +46,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.AuthService.RegisterUser(req)
+	err = h.AuthService.RegisterUser(req)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -59,7 +59,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	response := dto.UserResponse{UserId: user.UserId, Email: user.Email, Username: user.Username}
+	response := dto.StandartResponse{
+		Message: "succsess",
+	}
 
 	json.NewEncoder(w).Encode(response)
 

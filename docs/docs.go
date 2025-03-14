@@ -93,7 +93,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.Note"
+                            "$ref": "#/definitions/dto.StandartResponse"
                         }
                     },
                     "400": {
@@ -355,7 +355,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dto.UserResponse"
+                            "$ref": "#/definitions/dto.StandartResponse"
                         }
                     },
                     "400": {
@@ -427,6 +427,15 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.StandartResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Hello World"
+                }
+            }
+        },
         "dto.UpdateNoteRequest": {
             "type": "object",
             "properties": {
@@ -437,23 +446,6 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "example": "Updated Note Title"
-                }
-            }
-        },
-        "dto.UserResponse": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
-                "userid": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "username": {
-                    "type": "string",
-                    "example": "john_doe"
                 }
             }
         },
