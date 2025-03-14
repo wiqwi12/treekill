@@ -7,6 +7,7 @@ import (
 	"2/internal/interface/http/handlers/httpHandlers"
 	"2/internal/interface/http/middleware"
 	"context"
+	"database/sql"
 	"github.com/swaggo/http-swagger"
 	"log"
 	"log/slog"
@@ -15,6 +16,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	//nolint
+	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver for database/sql
+	"github.com/joho/godotenv"
 
 	//nolint
 	_ "2/docs"
@@ -42,10 +46,27 @@ func main() {
 
 func Run() {
 
-	secret := "12345"
+	if err := godotenv.Load(".env"); err != nil {
+		log.Fatalf("Error loading .env file")
+	}
 
-	UserRepo := storage.NewUserRepository()
-	NotesRepo := storage.NewNotesRepository()
+	dbConnStr := os.Getenv("DB_CONNECTION")
+	if dbConnStr == "" {
+		log.Fatal("Failed to load environment variables. Check BOT_TOKEN and DB_CONNECTION.")
+	}
+
+	db, err := sql.Open("pgx", dbConnStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	secret := os.Getenv("SECRET")
+	if secret == "" {
+		log.Fatal("Failed to load environment variables. Check BOT_TOKEN and DB_CONNECTION.")
+	}
+
+	UserRepo := storage.NewUserRepository(db)
+	NotesRepo := storage.NewNotesRepository(db)
 	NotesService := service.NewNoteService(*NotesRepo)
 	AuthService := service.NewAuthService(UserRepo, secret)
 
@@ -59,7 +80,7 @@ func Run() {
 	))
 
 	mux.HandleFunc("POST  /user/login", AuthHandler.Login)
-	mux.HandleFunc("POST /user/register", AuthHandler.Register)
+	mux.HandleFunc("POST  /user/register", AuthHandler.Register)
 	mux.HandleFunc("GET /notes", NotesHandler.GetNotes)
 	mux.HandleFunc("GET /notes/{id}", NotesHandler.GetNoteHandler)
 	mux.HandleFunc("POST /notes", NotesHandler.CreateNote)

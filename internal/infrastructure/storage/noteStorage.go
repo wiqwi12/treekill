@@ -2,104 +2,147 @@ package storage
 
 import (
 	"2/internal/domain/models"
+	"database/sql"
 	"errors"
+	"fmt"
+	"github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
-	"sync"
+	"time"
 )
 
 type NotesRepository struct {
-	notes     map[uuid.UUID]models.Note //Contains key - note id, val - note
-	userIndex map[uuid.UUID][]uuid.UUID //key - userId, val - slice of user`s notes id`s
-	mutex     sync.Mutex
+	Db *sql.DB
 }
 
-func NewNotesRepository() *NotesRepository {
+func NewNotesRepository(db *sql.DB) *NotesRepository {
 	return &NotesRepository{
-		notes:     make(map[uuid.UUID]models.Note),
-		userIndex: make(map[uuid.UUID][]uuid.UUID),
+		Db: db,
 	}
 }
 
-func (s *NotesRepository) Create(note models.Note) (models.Note, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (s *NotesRepository) Create(note models.Note) error {
 
-	s.notes[note.ID] = note
-	s.userIndex[note.UserId] = append(s.userIndex[note.UserId], note.ID)
-	return note, nil
+	query, args, err := squirrel.Insert("notes").
+		Columns("id", "user_id", "title", "content", "created_at", "updated_at").
+		Values(note.ID, note.UserId, note.Title, note.Content, note.CreatedAt, note.UpdatedAt).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+
+	if err != nil {
+		return err
+	}
+	_, err = s.Db.Query(query, args...)
+	if err != nil {
+		return errors.New(fmt.Sprint("Error inserting note into database: ", err))
+	}
+
+	return nil
 }
 
 func (s *NotesRepository) Get(id uuid.UUID) (models.Note, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 
-	note, ok := s.notes[id]
-	if !ok {
-		return models.Note{}, errors.New("not found")
+	query, args, err := squirrel.Select("id", "user_id", "title", "content", "created_at", "updated_at").
+		From("notes").Where(squirrel.Eq{"id": id}).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+
+	if err != nil {
+		return models.Note{}, err
+	}
+
+	var note models.Note
+	row := s.Db.QueryRow(query, args...)
+	err = row.Scan(
+		&note.ID,
+		&note.UserId,
+		&note.Title,
+		&note.Content,
+		&note.CreatedAt,
+		&note.UpdatedAt)
+
+	if err != nil {
+		return models.Note{}, err
 	}
 
 	return note, nil
 }
 
 func (s *NotesRepository) GetAllByUserId(id uuid.UUID) ([]models.Note, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 
-	noteIds, ok := s.userIndex[id]
-	if !ok {
-		return []models.Note{}, errors.New("User does not have any notes")
+	query, args, err := squirrel.Select("*").
+		From("notes").
+		Where(squirrel.Eq{
+			"user_id": id,
+		}).PlaceholderFormat(squirrel.Dollar).ToSql()
+	if err != nil {
+		return []models.Note{}, err
 	}
 
-	notes := make([]models.Note, len(noteIds))
-	for _, noteId := range noteIds {
-		notes = append(notes, s.notes[noteId])
+	rows, err := s.Db.Query(query, args...)
+	if err != nil {
+		return []models.Note{}, err
+	}
+	defer rows.Close()
+
+	var notes []models.Note
+	for rows.Next() {
+		var note models.Note
+		err = rows.Scan(
+			&note.ID,
+			&note.UserId,
+			&note.Title,
+			&note.Content,
+			&note.CreatedAt,
+			&note.UpdatedAt)
+		if err != nil {
+			return []models.Note{}, err
+		}
+		notes = append(notes, note)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return []models.Note{}, err
 	}
 	return notes, nil
-
 }
 
 func (s *NotesRepository) Update(note models.Note) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	exsistingNote, ok := s.notes[note.ID]
-	if !ok {
-		return errors.New("not found")
+	prev, err := s.Get(note.ID)
+	if err != nil {
+		return err
 	}
 
-	if exsistingNote.UserId != note.UserId {
-		return errors.New("note is not owned by this user")
+	if prev.Content == note.Content && prev.Title == note.Title {
+		return errors.New("There is no updates")
 	}
 
-	s.notes[note.ID] = note
+	query, args, err := squirrel.Update("notes").
+		Set("title", note.Title).
+		Set("content", note.Content).
+		Set("updated_at", time.Now()).
+		Where(squirrel.Eq{"id": note.ID}).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
 
-	return nil
+	if err != nil {
+		return err
+	}
 
+	_, err = s.Db.Exec(query, args...)
+	return err
 }
 
 func (s *NotesRepository) Delete(id uuid.UUID) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 
-	note, ok := s.notes[id]
-	if !ok {
-		return errors.New("Note does not exist")
+	query, args, err := squirrel.Delete("notes").Where(squirrel.Eq{
+		"user_id": id,
+	}).PlaceholderFormat(squirrel.Dollar).ToSql()
+	if err != nil {
+		return err
 	}
 
-	delete(s.notes, id)
+	_, err = s.Db.Exec(query, args...)
+	return err
 
-	userNoteIds, _ := s.userIndex[id]
-	updated := make([]uuid.UUID, 0, len(userNoteIds))
-
-	for _, userNoteId := range userNoteIds {
-		updated = append(updated, userNoteId)
-	}
-
-	if len(updated) == 0 {
-		delete(s.userIndex, note.UserId)
-	}
-
-	s.userIndex[note.UserId] = updated
-
-	return nil
 }

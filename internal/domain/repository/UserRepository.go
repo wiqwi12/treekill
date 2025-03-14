@@ -6,7 +6,7 @@ import (
 )
 
 type UserRepository interface {
-	Create(user models.User) (models.User, error)
-	GetUserByEmail(email string) (models.User, error)
+	Create(user models.User) error
+	GetUserByEmail(email string) (models.User, bool, error)
 	GetUserById(id uuid.UUID) (models.User, error)
 }

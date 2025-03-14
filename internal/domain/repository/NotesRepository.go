@@ -6,7 +6,7 @@ import (
 )
 
 type NotesRepository interface {
-	Create(note models.Note) (models.Note, error)
+	Create(note models.Note) error
 	GetNoteById(idStr string) (models.Note, error)
 	GetAllByUserId(id uuid.UUID) ([]models.Note, error)
 	Update(note models.Note) error

@@ -148,7 +148,7 @@ func (h *NoteHandler) GetNotes(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param input body dto.CreateNoteRequest true "Note data"
-// @Success 201 {object} models.Note
+// @Success 201 {object} dto.StandartResponse
 // @Failure 400 {object} errors.ErrorResponse
 // @Failure 401 {object} errors.ErrorResponse
 // @Failure 500 {object} errors.ErrorResponse

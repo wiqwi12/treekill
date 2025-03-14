@@ -20,22 +20,24 @@ func NewAuthService(userRepo *storage.UserRepository, secret string) *AuthServic
 	return &AuthService{UserRepo: userRepo, Secret: secret}
 }
 
-func (s *AuthService) RegisterUser(req dto.RegistrationRequest) (models.User, error) {
+func (s *AuthService) RegisterUser(req dto.RegistrationRequest) error {
 
-	_, err := s.UserRepo.GetUserByEmail(req.Email)
-	if err == nil {
-		return models.User{}, errors.New("User with this email already exsits")
+	_, exsists, err := s.UserRepo.GetUserByEmail(req.Email)
+	if exsists {
+		return errors.New("User with this email already exsits")
 	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
 
 	user := models.User{
 		UserId:   uuid.New(),
 		Username: req.Username,
 		Email:    req.Email,
-		Password: string(hashedPassword),
+		Password: req.Password,
 		Created:  time.Now(),
 	}
+	user.HashPassword()
 
 	return s.UserRepo.Create(user)
 
@@ -43,7 +45,13 @@ func (s *AuthService) RegisterUser(req dto.RegistrationRequest) (models.User, er
 
 // Исправляем функцию LoginUser для сохранения UUID как строки в токене
 func (s *AuthService) LoginUser(req dto.LoginRequest) (string, error) {
-	user, err := s.UserRepo.GetUserByEmail(req.Email)
+	user, exsists, err := s.UserRepo.GetUserByEmail(req.Email)
+
+	if !exsists {
+		return "", errors.New("There is no user with this email")
+	}
+
+	//переписать под валидацию данных
 	if err != nil {
 		return "", errors.New("Invalid email")
 	}
@@ -53,9 +61,8 @@ func (s *AuthService) LoginUser(req dto.LoginRequest) (string, error) {
 		return "", errors.New("Invalid password")
 	}
 
-	// Исправленный код - сохраняем UUID как строку
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.UserId.String(), // Преобразуем UUID в строку
+		"user_id": user.UserId.String(),
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
 

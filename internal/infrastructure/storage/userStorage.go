@@ -2,49 +2,94 @@ package storage
 
 import (
 	"2/internal/domain/models"
-	"errors"
+	"database/sql"
+	"github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
-	"sync"
+
+	"time"
 )
 
 type UserRepository struct {
-	storage map[uuid.UUID]models.User
-	sync.Mutex
+	Db *sql.DB
 }
 
-func NewUserRepository() *UserRepository {
+func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{
-		storage: make(map[uuid.UUID]models.User),
+		Db: db,
 	}
 }
 
-func (r *UserRepository) Create(user models.User) (models.User, error) {
-	r.Lock()
-	defer r.Unlock()
+func (r *UserRepository) Create(user models.User) error {
 
-	r.storage[user.UserId] = user
-	return user, nil
+	query, args, err := squirrel.Insert("users").
+		Columns("user_id", "username", "email", "password", "created").
+		Values(user.UserId, user.Username, user.Email, user.Password, time.Now()).
+		PlaceholderFormat(squirrel.Dollar).ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = r.Db.Query(query, args...)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (r *UserRepository) GetUserByEmail(email string) (models.User, error) {
-	r.Lock()
-	defer r.Unlock()
+func (r *UserRepository) GetUserByEmail(email string) (models.User, bool, error) {
+	query, args, err := squirrel.Select("user_id", "username", "email", "password", "created").
+		From("users").
+		Where(squirrel.Eq{
+			"email": email,
+		}).PlaceholderFormat(squirrel.Dollar).ToSql()
+	if err != nil {
+		return models.User{}, false, err
+	}
 
-	for _, user := range r.storage {
-		if user.Email == email {
-			return user, nil
+	row := r.Db.QueryRow(query, args...)
+	user := models.User{}
+	err = row.Scan(
+		&user.UserId,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Created,
+	)
+
+	// Проверяем, был ли найден пользователь
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Пользователь не найден, но это не ошибка
+			return models.User{}, false, nil
 		}
+		// Произошла реальная ошибка при выполнении запроса
+		return models.User{}, false, err
 	}
-	return models.User{}, errors.New("user not found")
+
+	// Пользователь найден
+	return user, true, nil
 }
-
 func (r *UserRepository) GetUserById(id uuid.UUID) (models.User, error) {
-	r.Lock()
-	defer r.Unlock()
 
-	user, ok := r.storage[id]
-	if !ok {
-		return models.User{}, errors.New("user not found")
+	query, args, err := squirrel.Select("user_id", "username", "email", "password", "created").
+		From("users").
+		Where(squirrel.Eq{
+			"user_id": id,
+		}).PlaceholderFormat(squirrel.Dollar).ToSql()
+	if err != nil {
+		return models.User{}, err
 	}
+
+	row := r.Db.QueryRow(query, args...)
+	user := models.User{}
+	row.Scan(
+		&user.UserId,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Created,
+	)
+
 	return user, nil
+
 }
